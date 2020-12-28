@@ -32,7 +32,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     # naming / file handling
-    parser.add_argument('--name', type=str, default='TrueWeight+jet_order_1+transformer+pcp+neighbor_96_residuedis_sigma_max_0.1mean_0.0025_selected_20_20_normalguid_6_pca_STN_yes_yes_consistency_loss_no', help='training run name')
+    parser.add_argument('--name', type=str, default='truewight+jetorder_1+pcp+neighbor_96_normalguid_6_pca_STN_yes_yes_consistency_loss_no_normalloss_yes_angleyes', help='training run name')
     parser.add_argument('--arch', type=str, default='simple', help='arcitecture name:  "simple" | "3dmfv"')
     parser.add_argument('--desc', type=str, default='My training run for single-scale normal estimation.', help='description')
     parser.add_argument('--indir', type=str, default='../data/pclouds/', help='input folder (point clouds)')
@@ -49,7 +49,7 @@ def parse_arguments():
     parser.add_argument('--nepoch', type=int, default=1000, help='number of epochs to train for')
     parser.add_argument('--optimizer', type=str, default='adam', help='optimizer adam / SGD / rmsprop')
     parser.add_argument('--opt_eps', type=float, default=1e-08, help='optimizer epsilon')
-    parser.add_argument('--batchSize', type=int, default=328, help='input batch size')
+    parser.add_argument('--batchSize', type=int, default=384, help='input batch size')
     parser.add_argument('--patch_radius', type=float, default=[0.05], nargs='+', help='patch radius in multiples of the shape\'s bounding box diagonal, multiple values for multi-scale.')
     parser.add_argument('--patch_center', type=str, default='point', help='center patch at...\n'
                         'point: center point\n'
@@ -138,7 +138,7 @@ def train_pcpnet(opt):
     model = get_model(opt, log_dirname)
 
 
-    os.system('cp train_n_est.py %s' % (log_dirname))  # backup the current training file
+    os.system('cp train_n_est_pcp.py %s' % (log_dirname))  # backup the current training file
 
     if opt.refine:
         refine_model_filename = os.path.join(out_dir, '{}_model_{}.pth' .format(opt.name, opt.refine_epoch))
@@ -227,11 +227,11 @@ def train_pcpnet(opt):
             optimizer.zero_grad()
 
             # forward pass
-            pred_pcp, pred, beta_pred, weights, trans, trans2, neighbor_normals = model(pts_feas)
+            pred_final, pred, beta_pred, weights, trans, trans2, neighbor_normals = model(pts_feas)
 
             points = pts_feas[:,0:3,:]
             loss, n_loss, _, consistency_loss, normal_loss1, normal_loss2, weight_loss  = compute_loss(
-                pred_pcp = pred_pcp, pred=pred, target=target, inputs = points,
+                pred_final=pred_final, pred=pred, target=target, inputs = points,
                 outputs=opt.outputs,
                 output_pred_ind=output_pred_ind,
                 output_target_ind=output_target_ind,
@@ -252,7 +252,7 @@ def train_pcpnet(opt):
 
             # print info and update log file
             log_string('[%s %d: %d/%d] %s loss: %f, loss_normal1: %f, loss_normal2: %f, loss_weight: %f' % (opt.name, epoch,
-                                                       train_batchind, train_num_batch-1, green('train'), loss.item(), normal_loss1.item(), normal_loss2.item(),weight_loss.item()), log_file)
+                                                       train_batchind, train_num_batch-1, green('train'), loss.item(), normal_loss1.item(), normal_loss2.item(), weight_loss.item()), log_file)
             train_writer.add_scalar('total_loss', loss.item(),
                                     (epoch + train_fraction_done) * train_num_batch * opt.batchSize)
             train_writer.add_scalar('n_loss', n_loss.item(),
@@ -288,12 +288,12 @@ def train_pcpnet(opt):
 
                 # forward pass
                 with torch.no_grad():
-                    pred_pcp, pred, beta_pred, weights, trans, trans2, neighbor_normals = model(
+                    pred_final, pred, beta_pred, weights, trans, trans2, neighbor_normals = model(
                             pts_feas,)
 
                 points = pts_feas[:,0:3,:]
                 loss, n_loss, err_angle, consistency_loss, normal_loss1, normal_loss2, weight_loss  = compute_loss(
-                    pred_pcp = pred_pcp, pred=pred, target=target, inputs = points,
+                    pred_final=pred_final, pred=pred, target=target, inputs = points,
                     outputs=opt.outputs,
                     output_pred_ind=output_pred_ind,
                     output_target_ind=output_target_ind,
@@ -307,8 +307,8 @@ def train_pcpnet(opt):
                 test_fraction_done = (test_batchind+1) / test_num_batch
                 avg_test_loss = avg_test_loss + loss.item()
                 # print info and update log file
-                log_string('[%s %d: %d/%d] %s loss: %f, loss_normal1: %f, loss_normal2: %f,loss_weight: %f' % (opt.name, epoch, train_batchind,
-                                                           train_num_batch-1, blue('test'), loss.item(), normal_loss1.item(), normal_loss2.item(),weight_loss.item()), log_file)
+                log_string('[%s %d: %d/%d] %s loss: %f, loss_normal1: %f, loss_normal2: %f, loss_weight: %f' % (opt.name, epoch, train_batchind,
+                                                           train_num_batch-1, blue('test'), loss.item(), normal_loss1.item(), normal_loss2.item(), weight_loss.item()), log_file)
 
                 test_writer.add_scalar('total_loss', loss.item(),
                                        (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
@@ -347,14 +347,13 @@ def train_pcpnet(opt):
             torch.save(model.state_dict(), os.path.join(out_dir, '%s_model_%d.pth' % (opt.name, epoch)))
 
 
-def compute_loss(pred_pcp, pred, inputs, target, outputs, output_pred_ind, output_target_ind, output_loss_weight, normal_loss_type, arch,
+def compute_loss(pred_final, pred, inputs, target, outputs, output_pred_ind, output_target_ind, output_loss_weight, normal_loss_type, arch,
                  patch_rot=None, phase='train',
                  use_consistency=False, point_weights=None, neighbor_normals=None, opt=None, trans=None, trans2=None):
 
     loss = torch.zeros(1, device=pred.device, dtype=pred.dtype)
     n_loss = torch.zeros(1, device=pred.device, dtype=pred.dtype)
     consistency_loss = torch.zeros(1, device=pred.device, dtype=pred.dtype)
-
     # # generate a inv normal distribution for weight kl div
     # add pointnet transformation regularization
     regularizer_trans = 0
@@ -375,7 +374,7 @@ def compute_loss(pred_pcp, pred, inputs, target, outputs, output_pred_ind, outpu
                 # transform predictions with inverse transform
                 # since we know the transform to be a rotation (QSTN), the transpose is the inverse
                 o_pred = torch.bmm(o_pred.unsqueeze(1), patch_rot.transpose(2, 1)).squeeze(1)
-                pred_pcp = torch.bmm(pred_pcp.unsqueeze(1), patch_rot.transpose(2, 1)).squeeze(1)
+                pred_final = torch.bmm(pred_final.unsqueeze(1), patch_rot.transpose(2, 1)).squeeze(1)
 
             if o == 'unoriented_normals':
                 if normal_loss_type == 'ms_euclidean':
@@ -385,7 +384,8 @@ def compute_loss(pred_pcp, pred, inputs, target, outputs, output_pred_ind, outpu
                     normal_loss = (1-torch.abs(cos_ang)).pow(2).mean() * output_loss_weight[oi]
                 elif normal_loss_type == 'sin':
                     normal_loss1 = 0.5 * torch.norm(torch.cross(o_pred, o_target, dim=-1), p=2, dim=1).mean()
-                    normal_loss2 = torch.min((pred_pcp-o_target).pow(2).sum(1), (pred_pcp+o_target).pow(2).sum(1)).mean() 
+                    normal_loss2 = torch.min((pred_final-o_target).pow(2).sum(1), (pred_final+o_target).pow(2).sum(1)).mean()
+                    #normal_loss2 = torch.norm(torch.cross(pred_final, o_target, dim=-1), p=2, dim=1).mean()
                     normal_loss = normal_loss1 + normal_loss2
                     '''
                     # compute true_weight by fitting distance(all weights are used)
@@ -408,6 +408,7 @@ def compute_loss(pred_pcp, pred, inputs, target, outputs, output_pred_ind, outpu
                     dis_big =  torch.where(dis_big < 0.0025, threshold_matrix, dis_big).unsqueeze(-1)
                     selected_mark = torch.ge(normal_dis, dis_big).float()+ torch.ge(torch.mul(normal_dis,-1), torch.mul(dis_small,-1)).float()
                     weight_loss = torch.mul(selected_mark, (true_weight-point_weights).pow(2)).mean() 
+                    #weight_loss = (true_weight-point_weights).pow(2).mean() 
                     
                 else:
                     raise ValueError('Unsupported loss type: %s' % (normal_loss_type))
@@ -444,7 +445,7 @@ def compute_loss(pred_pcp, pred, inputs, target, outputs, output_pred_ind, outpu
                     o_pred = torch.bmm(o_pred.view(-1, 1, 3),
                                        patch_rot.transpose(2, 1).repeat(1, n_points, 1, 1).view(-1, 3, 3)).view(batch_size, n_points, 3)
                 # if opt.jet_order < 2: # when the jet has order higher than 2 the normal vector orientation matters.
-                ''' jZhang do not use the  consistency_loss
+                '''
                 if normal_loss_type == 'ms_euclidean':
                     consistency_loss = torch.mean(point_weights * torch.min((o_pred - o_target).pow(2).sum(2),
                                                                             (o_pred + o_target).pow(2).sum(2)) )
@@ -459,7 +460,8 @@ def compute_loss(pred_pcp, pred, inputs, target, outputs, output_pred_ind, outpu
                 else:
                     raise ValueError('Unsupported loss type: %s' % (normal_loss_type))
                 '''
-                ''' JZhang do not compute the weight regularizer
+                '''
+                #JZhang do not compute the weight regularizer
                 if opt.con_reg == 'mean':
                     regularizer = - 0.01 * torch.mean(point_weights)
                 elif opt.con_reg == "log":
@@ -494,12 +496,12 @@ def compute_loss(pred_pcp, pred, inputs, target, outputs, output_pred_ind, outpu
                 regularizer = regularizer_trans
                 consistency_loss = consistency_loss + regularizer
 
-                loss = consistency_loss + normal_loss+weight_loss
-                #loss = normal_loss+weight_loss
+                loss = consistency_loss + weight_loss + normal_loss
+                #loss = normal_loss+consistency_loss
         else:
             raise ValueError('Unsupported output type: %s' % (o))
 
-    return loss, n_loss, err_angle, consistency_loss, normal_loss1, normal_loss2, weight_loss 
+    return loss, n_loss, err_angle, consistency_loss, normal_loss1, normal_loss2, weight_loss
 
 
 def get_data_loaders(opt, target_features):
@@ -636,7 +638,7 @@ def get_model(opt, log_dirname):
     else:
         raise ValueError('Unsupported architecture type')
     os.system('cp %s %s' % (
-        './models/DeepFit.py', os.path.join(log_dirname, 'DeepFit.py')))  # backup the current model
+        './models/DeepFit_pcp.py', os.path.join(log_dirname, 'DeepFit_pcp.py')))  # backup the current model
     return model
 
 if __name__ == '__main__':
