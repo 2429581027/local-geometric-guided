@@ -29,9 +29,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     # naming / file handling
-    parser.add_argument('--indir', type=str, default='../data/pclouds', help='input folder (point clouds)')
-    parser.add_argument('--outdir', type=str, default='../results/pclouds/local-geometric-guided/256/', help='input folder (point clouds)')
-    parser.add_argument('--testset', type=str, default='testset_all.txt', help='shape set file name')
+    parser.add_argument('--indir', type=str, default='../data/data_pcv_one_normal/SharpFeature', help='input folder (point clouds)')
+    parser.add_argument('--outdir', type=str, default='../results/pclouds/local-geometric-guided/128_v2/SharpFeature', help='input folder (point clouds)')
+    parser.add_argument('--testset', type=str, default='testset_SharpFeature.txt', help='shape set file name')
     parser.add_argument('--models', type=str, default='truewight_guided+jetorder_1+pcp+neighbor_256_normalguid_6_pca_STN_yes_yes_consistency_loss_no_trans1reg_no', help='names of trained models, can evaluate multiple models')
     parser.add_argument('--modelpostfix', type=str, default='_model_999.pth', help='model file postfix')
     parser.add_argument('--logdir', type=str, default='our_models/3model/', help='model folder')
@@ -216,7 +216,7 @@ def get_data_loaders(opt, trainopt, target_features):
 
     test_dataset = PointcloudPatchDataset(
         root=opt.indir,
-        shape_list_filename=opt.testset,
+        shape_list_filename=opt.testset.lower(),
         patch_radius=trainopt.patch_radius,
         points_per_patch=trainopt.points_per_patch,
         patch_features=target_features,
