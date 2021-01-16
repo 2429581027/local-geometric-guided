@@ -29,15 +29,16 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     # naming / file handling
-    parser.add_argument('--indir', type=str, default='../data/pclouds/', help='input folder (point clouds)')
+    parser.add_argument('--indir', type=str, default='../data/pclouds', help='input folder (point clouds)')
+    parser.add_argument('--outdir', type=str, default='../results/pclouds/local-geometric-guided/256/', help='input folder (point clouds)')
     parser.add_argument('--testset', type=str, default='testset_all.txt', help='shape set file name')
-    parser.add_argument('--models', type=str, default='truewight+jetorder_1+pcp+neighbor_96_normalguid_6_pca_STN_yes_yes_consistency_loss_no_normalloss_yes_angleyes', help='names of trained models, can evaluate multiple models')
+    parser.add_argument('--models', type=str, default='truewight_guided+jetorder_1+pcp+neighbor_256_normalguid_6_pca_STN_yes_yes_consistency_loss_no_trans1reg_no', help='names of trained models, can evaluate multiple models')
     parser.add_argument('--modelpostfix', type=str, default='_model_999.pth', help='model file postfix')
-    parser.add_argument('--logdir', type=str, default='./log', help='model folder')
+    parser.add_argument('--logdir', type=str, default='our_models/3model/', help='model folder')
     parser.add_argument('--parmpostfix', type=str, default='_params.pth', help='parameter file postfix')
-    parser.add_argument('--gpu_idx', type=int, default=0, help='set < 0 to use CPU')
+    parser.add_argument('--gpu_idx', type=int, default=3, help='set < 0 to use CPU')
 
-    parser.add_argument('--sparse_patches', type=int, default=True, help='evaluate on a sparse set of patches, given by a .pidx file containing the patch center point indices.')
+    parser.add_argument('--sparse_patches', type=int, default=False, help='evaluate on a sparse set of patches, given by a .pidx file containing the patch center point indices.')
     parser.add_argument('--sampling', type=str, default='full', help='sampling strategy, any of:\n'
                         'full: evaluate all points in the dataset\n'
                         'sequential_shapes_random_patches: pick n random points from each shape as patch centers, shape order is not randomized')
@@ -66,7 +67,8 @@ def test_n_est(opt):
         model_log_dir =  os.path.join(opt.logdir, model_name, 'trained_models')
         model_filename = os.path.join(model_log_dir, model_name+opt.modelpostfix)
         param_filename = os.path.join(model_log_dir, model_name+opt.parmpostfix)
-        output_dir = os.path.join(opt.logdir, model_name, 'results_pcp')
+        # output_dir = os.path.join(opt.logdir, model_name, 'results_pcp')
+        output_dir = opt.outdir
         '''
         model_log_dir =  os.path.join(opt.logdir, model_name)
         model_filename = os.path.join(model_log_dir, model_name+opt.modelpostfix)
