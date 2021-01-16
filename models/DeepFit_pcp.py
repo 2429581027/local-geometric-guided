@@ -336,7 +336,7 @@ class DeepFit(nn.Module):
         #n_pts = x.size()[2]
         #x_g = global_feature.view(-1, 128, 1).repeat(1, 1, n_pts)
         #x = torch.cat([x_g, x], 1)
-        x = F.relu(self.bnfc1(self.fc1(x.squeeze())))
+        x = F.relu(self.bnfc1(self.fc1(x.squeeze(-1))))
         normal_final = self.fc2(x)
 
         #normal_final_len = torch.max(normal_final.new_tensor([sys.float_info.epsilon*100]), normal_final.norm(p=2, dim=1, keepdim=True))
