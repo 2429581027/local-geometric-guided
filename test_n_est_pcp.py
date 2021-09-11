@@ -29,7 +29,7 @@ def parse_arguments():
     # naming / file handling
     parser.add_argument('--indir', type=str, default='../data/pclouds/', help='input folder (point clouds)')
     parser.add_argument('--testset', type=str, default='testset_all.txt', help='shape set file name')
-    parser.add_argument('--models', type=str, default='truewight_guided+jetorder_1+pcp+neighbor_256_normalguid_6_pca_STN_yes_yes_consistency_loss_no_trans1reg_no_v3', help='names of trained models, can evaluate multiple models')
+    parser.add_argument('--models', type=str, default='GMG_normal', help='names of trained models, can evaluate multiple models')
     parser.add_argument('--modelpostfix', type=str, default='_model_999.pth', help='model file postfix')
     parser.add_argument('--logdir', type=str, default='./log', help='model folder')
     parser.add_argument('--parmpostfix', type=str, default='_params.pth', help='parameter file postfix')
