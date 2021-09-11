@@ -1,6 +1,4 @@
-# test_n_est.py run a pretrained DeepFit model and export the normal estimation output
-# Author:Itzik Ben Sabat sitzikbs[at]gmail.com
-# If you use this code,see LICENSE.txt file and cite our work
+# test_n_est_pcp.py run a pretrained model and export the normal estimation output
 
 from __future__ import print_function
 import argparse
@@ -29,16 +27,15 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     # naming / file handling
-    parser.add_argument('--indir', type=str, default='../data/data_pcv_one_normal/SharpFeature', help='input folder (point clouds)')
-    parser.add_argument('--outdir', type=str, default='../results/pclouds/local-geometric-guided/128_v2/SharpFeature', help='input folder (point clouds)')
-    parser.add_argument('--testset', type=str, default='testset_SharpFeature.txt', help='shape set file name')
-    parser.add_argument('--models', type=str, default='truewight_guided+jetorder_1+pcp+neighbor_256_normalguid_6_pca_STN_yes_yes_consistency_loss_no_trans1reg_no', help='names of trained models, can evaluate multiple models')
+    parser.add_argument('--indir', type=str, default='../data/pclouds/', help='input folder (point clouds)')
+    parser.add_argument('--testset', type=str, default='testset_all.txt', help='shape set file name')
+    parser.add_argument('--models', type=str, default='truewight_guided+jetorder_1+pcp+neighbor_256_normalguid_6_pca_STN_yes_yes_consistency_loss_no_trans1reg_no_v3', help='names of trained models, can evaluate multiple models')
     parser.add_argument('--modelpostfix', type=str, default='_model_999.pth', help='model file postfix')
-    parser.add_argument('--logdir', type=str, default='our_models/3model/', help='model folder')
+    parser.add_argument('--logdir', type=str, default='./log', help='model folder')
     parser.add_argument('--parmpostfix', type=str, default='_params.pth', help='parameter file postfix')
-    parser.add_argument('--gpu_idx', type=int, default=3, help='set < 0 to use CPU')
+    parser.add_argument('--gpu_idx', type=int, default=1, help='set < 0 to use CPU')
 
-    parser.add_argument('--sparse_patches', type=int, default=False, help='evaluate on a sparse set of patches, given by a .pidx file containing the patch center point indices.')
+    parser.add_argument('--sparse_patches', type=int, default=True, help='evaluate on a sparse set of patches, given by a .pidx file containing the patch center point indices.')
     parser.add_argument('--sampling', type=str, default='full', help='sampling strategy, any of:\n'
                         'full: evaluate all points in the dataset\n'
                         'sequential_shapes_random_patches: pick n random points from each shape as patch centers, shape order is not randomized')
@@ -67,8 +64,7 @@ def test_n_est(opt):
         model_log_dir =  os.path.join(opt.logdir, model_name, 'trained_models')
         model_filename = os.path.join(model_log_dir, model_name+opt.modelpostfix)
         param_filename = os.path.join(model_log_dir, model_name+opt.parmpostfix)
-        # output_dir = os.path.join(opt.logdir, model_name, 'results_pcp')
-        output_dir = opt.outdir
+        output_dir = os.path.join(opt.logdir, model_name, 'results_pcp')
         '''
         model_log_dir =  os.path.join(opt.logdir, model_name)
         model_filename = os.path.join(model_log_dir, model_name+opt.modelpostfix)
@@ -88,6 +84,7 @@ def test_n_est(opt):
         if not hasattr(trainopt, 'arch'):
             trainopt.arch = 'simple'
 
+    trainopt.batchSize = 128
     if opt.batchSize == 0:
         opt.batchSize = trainopt.batchSize
 
@@ -110,7 +107,7 @@ def test_n_est(opt):
                 os.path.join(opt.logdir, model_name, "DeepFitNormals.py")))
             DeepFit = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(DeepFit)
-            regressor = DeepFit.SimpPointNet(1, num_points=trainopt.points_per_patch,
+            regressor = DeepFit.SimpPointNet(1, num_points=512, #trainopt.points_per_patch,
                                                 use_point_stn=trainopt.use_point_stn,
                                                 use_feat_stn=trainopt.use_feat_stn, point_tuple=trainopt.point_tuple,
                                                 sym_op=trainopt.sym_op, arch=trainopt.arch,
@@ -216,7 +213,7 @@ def get_data_loaders(opt, trainopt, target_features):
 
     test_dataset = PointcloudPatchDataset(
         root=opt.indir,
-        shape_list_filename=opt.testset.lower(),
+        shape_list_filename=opt.testset,
         patch_radius=trainopt.patch_radius,
         points_per_patch=trainopt.points_per_patch,
         patch_features=target_features,
