@@ -24,7 +24,7 @@ BASE_DIR = os.path.abspath(os.path.join(BASELINE_DIR, os.pardir))
 # python utils/evaluate.py --normal_results_path='log/experts/pcpnet_results/' --data_path='data/pcpnet/' --dataset_list 'testset' 'testset_whitenoise_small' 'testset_whitenoise_medium' 'testset_whitenoise_large' 'testset_vardensity_gradient' 'testset_vardensity_striped'
 # python3 evaluate.py --normal_results_path './log/jetnet_nci_new3/ablations/Deepfit_simple_sigmoid_cr_log_d1_p64_Lsin/results/'
 parser = argparse.ArgumentParser()
-parser.add_argument('--normal_results_path', type=str, default='./log/TrueWeight+jet_order_1+neighbor_96_residuedis_sigma_max_0.1mean_0.0025_selected_20_20_normalguid_6_pca_STN_yes_yes_consistency_loss_no/results/', help='Log dir [default: log]')
+parser.add_argument('--normal_results_path', type=str, default='./log/GMG_normal/results_pcp/', help='Log dir [default: log]')
 parser.add_argument('--data_path', type=str, default='data/pclouds/', help='Relative path to data directory')
 parser.add_argument('--sparse_patches', type=int, default=True, help='Evaluate on a sparse subset or on the entire point cloud')
 parser.add_argument('--dataset_list', type=str,
