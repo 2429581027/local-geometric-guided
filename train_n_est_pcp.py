@@ -32,7 +32,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     # naming / file handling
-    parser.add_argument('--name', type=str, default='truewight+jetorder_1+pcp+neighbor_96_normalguid_6_pca_STN_yes_yes_consistency_loss_no_normalloss_yes_angleyes', help='training run name')
+    parser.add_argument('--name', type=str, default='GMG_normal', help='training run name')
     parser.add_argument('--arch', type=str, default='simple', help='arcitecture name:  "simple" | "3dmfv"')
     parser.add_argument('--desc', type=str, default='My training run for single-scale normal estimation.', help='description')
     parser.add_argument('--indir', type=str, default='../data/pclouds/', help='input folder (point clouds)')
@@ -89,7 +89,7 @@ def parse_arguments():
     parser.add_argument('--n_gaussians', type=int, default=1, help='use feature spatial transformer')
 
     parser.add_argument('--jet_order', type=int, default=1, help='jet polynomial fit order')
-    parser.add_argument('--points_per_patch', type=int, default=96, help='max. number of points per patch')
+    parser.add_argument('--points_per_patch', type=int, default=256, help='max. number of points per patch')
     parser.add_argument('--neighbor_search', type=str, default='k', help='[k | r] for k nearest and radius')
     parser.add_argument('--weight_mode', type=str, default="sigmoid", help='which function to use on the weight output: softmax, tanh, sigmoid')
     parser.add_argument('--use_consistency', type=int, default=True, help='flag to use consistency loss')
@@ -403,8 +403,8 @@ def compute_loss(pred_final, pred, inputs, target, outputs, output_pred_ind, out
                     sigma = torch.where(sigma < 0.0025, threshold_matrix, sigma)
                     true_weight =  torch.exp(torch.mul(torch.div(normal_dis, sigma.unsqueeze(-1)),-1)).squeeze()    # JZhang added inputs(points) into the function 
                     sorted_dis, _ = torch.sort(normal_dis)
-                    dis_small = sorted_dis[: , 20].unsqueeze(-1)
-                    dis_big = sorted_dis[:,-20]
+                    dis_small = sorted_dis[: , 50].unsqueeze(-1)
+                    dis_big = sorted_dis[:,-50]
                     dis_big =  torch.where(dis_big < 0.0025, threshold_matrix, dis_big).unsqueeze(-1)
                     selected_mark = torch.ge(normal_dis, dis_big).float()+ torch.ge(torch.mul(normal_dis,-1), torch.mul(dis_small,-1)).float()
                     weight_loss = torch.mul(selected_mark, (true_weight-point_weights).pow(2)).mean() 
