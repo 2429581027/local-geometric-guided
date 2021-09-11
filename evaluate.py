@@ -1,6 +1,4 @@
 # evaluation.py run normal estimation evaluation
-# Author:Itzik Ben Sabat sitzikbs[at]gmail.com
-# If you use this code,see LICENSE.txt file and cite our work
 
 import os
 import numpy as np
